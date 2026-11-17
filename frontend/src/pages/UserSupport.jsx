@@ -60,7 +60,7 @@ const UserSupport = () => {
             const token = await currentUser.getIdToken();
 
             const response = await fetch(
-                "http://localhost:5000/api/support",
+                "${import.meta.env.VITE_API_URL}/support",
                 {
                     method: "POST",
                     headers: {
