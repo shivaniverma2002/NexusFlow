@@ -24,7 +24,7 @@ import {
     Sparkles,
     LoaderCircle
 } from "lucide-react";
-
+import { logoutUser } from "../services/authService.js";
 export default function Login() {
     const navigate = useNavigate();
 
@@ -54,9 +54,12 @@ export default function Login() {
         }
 
         if (data.user?.isActive === false) {
-            await auth.signOut();
-            throw new Error("Your account is inactive. Contact the administrator.");
-        }
+    await logoutUser();
+
+    throw new Error(
+        "Your account is inactive. Contact the administrator."
+    );
+}
 
         navigate(
             data.user.role === "admin"

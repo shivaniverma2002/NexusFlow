@@ -1,19 +1,28 @@
+
 import mongoose from "mongoose";
 import dns from "node:dns";
 
-// Configure DNS before MongoDB connection
-dns.setServers(["8.8.8.8", "1.1.1.1"]);
-
-console.log("Custom DNS servers:", dns.getServers());
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
 const connectDB = async () => {
     try {
-        await mongoose.connect(process.env.MONGODB_URI);
+        const mongoURI = process.env.MONGODB_URI;
+
+        if (!mongoURI) {
+            throw new Error("MONGODB_URI is missing");
+        }
+
+        console.log("DNS servers:", dns.getServers());
+
+        await mongoose.connect(mongoURI, {
+            serverSelectionTimeoutMS: 10000,
+            maxPoolSize: 10
+        });
 
         console.log("MongoDB connected successfully!");
     } catch (error) {
-        console.error("MongoDB connection failed:", error);
-        process.exit(1);
+        console.error("MongoDB connection failed:", error.message);
+        throw error;
     }
 };
 

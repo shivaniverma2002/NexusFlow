@@ -182,43 +182,63 @@ const handleToggleStatus = async (user) => {
 };
 
     // Delete User
-    const handleDeleteUser = async (user) => {
-        const confirmed = window.confirm(
-            `Are you sure you want to permanently delete ${user.name}?`
+  
+const handleDeleteUser = async (user) => {
+    const result = await Swal.fire({
+        title: "Delete User?",
+        text: `Are you sure you want to permanently delete ${user.name}?`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Yes, delete",
+        cancelButtonText: "Cancel",
+        confirmButtonColor: "#e11d48",
+        reverseButtons: true
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const currentUser = auth.currentUser;
+
+        if (!currentUser) {
+            throw new Error("Please login again.");
+        }
+
+        const token = await currentUser.getIdToken();
+
+        const response = await fetch(
+            `http://localhost:5000/api/users/admin/users/${user._id}`,
+            {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
         );
 
-        if (!confirmed) return;
+        const data = await response.json();
 
-        try {
-            const token = await auth.currentUser.getIdToken();
-
-            const response = await fetch(
-                `http://localhost:5000/api/users/admin/users/${user._id}`,
-                {
-                    method: "DELETE",
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || "Failed to delete user");
-            }
-
-            setUsers((prevUsers) =>
-                prevUsers.filter((item) => item._id !== user._id)
-            );
-
-            toast.success("User deleted successfully!");
-
-        } catch (error) {
-            console.error("Delete user error:", error);
-            toast.error("Failed to delete user");
+        if (!response.ok) {
+            throw new Error(data.message || "Failed to delete user");
         }
-    };
+
+        setUsers((prevUsers) =>
+            prevUsers.filter((item) => item._id !== user._id)
+        );
+
+        toast.success("User deleted successfully!", {
+            description: `${user.name} has been removed.`
+        });
+
+    } catch (error) {
+        console.error("Delete user error:", error);
+
+        toast.error("Unable to delete user", {
+            description: error.message
+        });
+    }
+};
+
     const handleAddUser = async (userData) => {
         try {
             setAddingUser(true);

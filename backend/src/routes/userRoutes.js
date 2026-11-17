@@ -1,5 +1,10 @@
+
 import express from "express";
+
 import verifyToken from "../middleware/authMiddleware.js";
+import authorizeRoles from "../middleware/roleMiddleware.js";
+import validateMiddleware from "../middleware/validateMiddleware.js";
+
 import {
     createUserProfile,
     getMyProfile,
@@ -11,26 +16,37 @@ import {
     getDashboardStats,
     adminCreateUser
 } from "../controllers/userController.js";
-import validateMiddleware from "../middleware/validateMiddleware.js";
+
 import {
     createUserSchema,
     updateUserSchema,
-    updateUserStatusSchema
+    updateUserStatusSchema,
+    adminCreateUserSchema
 } from "../validators/userValidator.js";
 
-import authorizeRoles from "../middleware/roleMiddleware.js";
 const router = express.Router();
 
-// Create user profile (authentication required)
+// Authenticated user profile routes
 router.post(
     "/profile",
     verifyToken,
     validateMiddleware(createUserSchema),
     createUserProfile
 );
-router.get("/me", verifyToken, getMyProfile);
-router.put("/me", verifyToken, updateMyProfile);
 
+router.get(
+    "/me",
+    verifyToken,
+    getMyProfile
+);
+
+router.put(
+    "/me",
+    verifyToken,
+    updateMyProfile
+);
+
+// Admin-only user management routes
 router.get(
     "/admin/users",
     verifyToken,
@@ -38,13 +54,14 @@ router.get(
     getAllUsers
 );
 
-// Admin: Create new user
 router.post(
     "/admin/users",
     verifyToken,
     authorizeRoles("admin"),
+    validateMiddleware(adminCreateUserSchema),
     adminCreateUser
 );
+
 router.put(
     "/admin/users/:id",
     verifyToken,
@@ -52,12 +69,14 @@ router.put(
     validateMiddleware(updateUserSchema),
     updateUser
 );
+
 router.delete(
     "/admin/users/:id",
     verifyToken,
     authorizeRoles("admin"),
     deleteUser
 );
+
 router.patch(
     "/admin/users/:id/status",
     verifyToken,
@@ -65,10 +84,12 @@ router.patch(
     validateMiddleware(updateUserStatusSchema),
     updateUserStatus
 );
+
 router.get(
     "/admin/stats",
     verifyToken,
     authorizeRoles("admin"),
     getDashboardStats
 );
+
 export default router;

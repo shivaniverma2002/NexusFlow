@@ -1,38 +1,76 @@
+
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+
 import verifyToken from "./middleware/authMiddleware.js";
-import userRoutes from "./routes/userRoutes.js";
 import authorizeRoles from "./middleware/roleMiddleware.js";
+import userRoutes from "./routes/userRoutes.js";
 import { apiLimiter } from "./middleware/rateLimitMiddleware.js";
+import supportRoutes from "./routes/supportRoutes.js";
+
+
 import {
     notFoundMiddleware,
     errorMiddleware
 } from "./middleware/errorMiddleware.js";
+
 const app = express();
 
-// Security middleware
-app.use(helmet());
+// Security headers
+app.use(
+    helmet({
+        crossOriginOpenerPolicy: {
+            policy: "same-origin-allow-popups"
+        }
+    })
+);
 
-// Allow React frontend requests
-app.use(cors({
-    origin: "http://localhost:5174"
-}));
+// CORS configuration
+const allowedOrigins = [
+    "http://localhost:5173",
+    "http://localhost:5174"
+];
+
+if (process.env.FRONTEND_URL) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
+app.use(
+    cors({
+        origin: allowedOrigins,
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+        credentials: true
+    })
+);
 
 // Parse JSON requests
-app.use(express.json());
-// Register user API routes
-app.use("/api", apiLimiter);
-app.use("/api/users", userRoutes);
-// Apply rate limiting to all API routes
-// Health-check API
+app.use(express.json({ limit: "10kb" }));
+
+// Health check - available before API rate limiting
 app.get("/api/health", (req, res) => {
     res.status(200).json({
         success: true,
         message: "NexusFlow AI backend is running!"
     });
 });
-// Protected API - requires valid Firebase token
+
+// Rate limit API requests
+app.use("/api", apiLimiter);
+
+// User routes
+app.use("/api/users", userRoutes);
+// User routes
+app.use("/api/users", userRoutes);
+
+// Support request routes
+app.use("/api/support", supportRoutes);
+
+// Admin notification routes
+
+
+// Protected API
 app.get("/api/protected", verifyToken, (req, res) => {
     res.status(200).json({
         success: true,
@@ -40,6 +78,8 @@ app.get("/api/protected", verifyToken, (req, res) => {
         user: req.user
     });
 });
+
+// Admin-only API
 app.get(
     "/api/admin/dashboard",
     verifyToken,
@@ -48,13 +88,15 @@ app.get(
         res.status(200).json({
             success: true,
             message: "Welcome to Admin Dashboard!",
-            user: req.dbUser
+            user: req.user
         });
     }
 );
+
+// 404 handler
 app.use(notFoundMiddleware);
 
 // Global error handler
 app.use(errorMiddleware);
-// Export Express app
+
 export default app;

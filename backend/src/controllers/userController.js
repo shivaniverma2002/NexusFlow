@@ -51,23 +51,18 @@ export const createUserProfile = async (req, res) => {
 };
 
 // Admin: Create a new user or administrator
+
+// Admin can create NORMAL USERS only
 export const adminCreateUser = async (req, res) => {
     let firebaseUser;
 
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password } = req.body;
 
-        if (!name?.trim() || !email?.trim() || !password || !role) {
+        if (!name?.trim() || !email?.trim() || !password) {
             return res.status(400).json({
                 success: false,
-                message: "Name, email, password and role are required"
-            });
-        }
-
-        if (!["admin", "user"].includes(role)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid role"
+                message: "Name, email and password are required"
             });
         }
 
@@ -91,19 +86,19 @@ export const adminCreateUser = async (req, res) => {
             });
         }
 
-        // Create account in Firebase Authentication
+        // Create Firebase account
         firebaseUser = await auth.createUser({
             email: normalizedEmail,
             password,
             displayName: name.trim()
         });
 
-        // Create profile in MongoDB
+        // Always assign user role
         const user = await User.create({
             firebaseUid: firebaseUser.uid,
             name: name.trim(),
             email: normalizedEmail,
-            role,
+            role: "user",
             isActive: true
         });
 
@@ -114,7 +109,6 @@ export const adminCreateUser = async (req, res) => {
         });
 
     } catch (error) {
-        // Roll back Firebase account if MongoDB creation fails
         if (firebaseUser) {
             try {
                 await auth.deleteUser(firebaseUser.uid);
@@ -222,12 +216,12 @@ export const getAllUsers = async (req, res) => {
     }
 };
 
+
 export const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
         const { name, role } = req.body;
 
-        // Validate MongoDB ID
         if (!mongoose.isValidObjectId(id)) {
             return res.status(400).json({
                 success: false,
@@ -235,34 +229,29 @@ export const updateUser = async (req, res) => {
             });
         }
 
-        // Validate input
+        // Role changes are not allowed
+        if (role !== undefined) {
+            return res.status(403).json({
+                success: false,
+                message: "User roles cannot be changed"
+            });
+        }
+
         if (
-            (name !== undefined &&
-                (typeof name !== "string" || !name.trim())) ||
-            (role !== undefined &&
-                !["admin", "user"].includes(role))
+            typeof name !== "string" ||
+            !name.trim() ||
+            name.trim().length < 2 ||
+            name.trim().length > 100
         ) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid name or role"
+                message: "Name must be between 2 and 100 characters"
             });
         }
 
-        if (name === undefined && role === undefined) {
-            return res.status(400).json({
-                success: false,
-                message: "Provide at least one field to update"
-            });
-        }
-
-        const updateData = {};
-
-        if (name !== undefined) updateData.name = name.trim();
-        if (role !== undefined) updateData.role = role;
-
-        const user = await User.findByIdAndUpdate(
-            id,
-            { $set: updateData },
+        const user = await User.findOneAndUpdate(
+            { _id: id, role: "user" },
+            { $set: { name: name.trim() } },
             { new: true, runValidators: true }
         ).select("-__v");
 
@@ -273,19 +262,22 @@ export const updateUser = async (req, res) => {
             });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "User updated successfully",
             user
         });
 
     } catch (error) {
-        res.status(500).json({
+        console.error("UPDATE USER ERROR:", error);
+
+        return res.status(500).json({
             success: false,
             message: "Failed to update user"
         });
     }
 };
+
 
 
 

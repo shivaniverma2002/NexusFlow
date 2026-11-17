@@ -1,27 +1,38 @@
 
 import { useState } from "react";
 import { X, UserPlus } from "lucide-react";
+import { toast } from "sonner";
 
 const AddUserModal = ({ onClose, onAdd, loading }) => {
     const [formData, setFormData] = useState({
         name: "",
         email: "",
-        password: "",
-        role: "user"
+        password: ""
     });
 
     const handleChange = (e) => {
-        setFormData({
-            ...formData,
+        setFormData((prev) => ({
+            ...prev,
             [e.target.name]: e.target.value
+        }));
+    };
+
+ const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (formData.password.length < 6) {
+        toast.error("Invalid password", {
+            description: "Password must be at least 6 characters long."
         });
-    };
+        return;
+    }
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        onAdd(formData);
-    };
-
+    onAdd({
+        name: formData.name.trim(),
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password
+    });
+};
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
             <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
@@ -31,17 +42,18 @@ const AddUserModal = ({ onClose, onAdd, loading }) => {
                         <div className="rounded-xl bg-indigo-50 p-3 text-indigo-600">
                             <UserPlus size={22} />
                         </div>
+
                         <div>
                             <h2 className="text-xl font-bold text-slate-900">
                                 Add New User
                             </h2>
                             <p className="text-sm text-slate-500">
-                                Create a new platform account
+                                Create a normal user account
                             </p>
                         </div>
                     </div>
 
-                    <button onClick={onClose} type="button">
+                    <button type="button" onClick={onClose}>
                         <X size={20} />
                     </button>
                 </div>
@@ -54,7 +66,7 @@ const AddUserModal = ({ onClose, onAdd, loading }) => {
                         placeholder="Full name"
                         required
                         minLength={2}
-                        maxLength={50}
+                        maxLength={100}
                         className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-500"
                     />
 
@@ -79,20 +91,15 @@ const AddUserModal = ({ onClose, onAdd, loading }) => {
                         className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-500"
                     />
 
-                    <select
-                        name="role"
-                        value={formData.role}
-                        onChange={handleChange}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-500"
-                    >
-                        <option value="user">Normal User</option>
-                        <option value="admin">Administrator</option>
-                    </select>
+                    <div className="rounded-xl bg-indigo-50 p-3 text-sm text-indigo-700">
+                        New accounts are automatically assigned the User role.
+                    </div>
 
                     <div className="flex justify-end gap-3 pt-3">
                         <button
                             type="button"
                             onClick={onClose}
+                            disabled={loading}
                             className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600"
                         >
                             Cancel
