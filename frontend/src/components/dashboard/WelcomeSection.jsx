@@ -9,7 +9,7 @@ const WelcomeSection = () => {
                 </p>
 
                 <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                    Welcome to NexusFlow AI
+                    Welcome to NexusFlow
                 </h1>
 
                 <p className="mt-2 text-sm text-slate-500">

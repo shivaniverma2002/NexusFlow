@@ -30,7 +30,7 @@ export const createUserProfile = async (req, res) => {
                 }
             },
             {
-                new: true,
+                 returnDocument: "after",
                 upsert: true,
                 runValidators: true
             }
@@ -49,6 +49,89 @@ export const createUserProfile = async (req, res) => {
         });
     }
 };
+
+// Admin: Create a new user or administrator
+export const adminCreateUser = async (req, res) => {
+    let firebaseUser;
+
+    try {
+        const { name, email, password, role } = req.body;
+
+        if (!name?.trim() || !email?.trim() || !password || !role) {
+            return res.status(400).json({
+                success: false,
+                message: "Name, email, password and role are required"
+            });
+        }
+
+        if (!["admin", "user"].includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid role"
+            });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: "Password must contain at least 6 characters"
+            });
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+
+        const existingUser = await User.findOne({
+            email: normalizedEmail
+        });
+
+        if (existingUser) {
+            return res.status(409).json({
+                success: false,
+                message: "Email already exists"
+            });
+        }
+
+        // Create account in Firebase Authentication
+        firebaseUser = await auth.createUser({
+            email: normalizedEmail,
+            password,
+            displayName: name.trim()
+        });
+
+        // Create profile in MongoDB
+        const user = await User.create({
+            firebaseUid: firebaseUser.uid,
+            name: name.trim(),
+            email: normalizedEmail,
+            role,
+            isActive: true
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "User created successfully",
+            user
+        });
+
+    } catch (error) {
+        // Roll back Firebase account if MongoDB creation fails
+        if (firebaseUser) {
+            try {
+                await auth.deleteUser(firebaseUser.uid);
+            } catch (rollbackError) {
+                console.error("Firebase rollback failed:", rollbackError.message);
+            }
+        }
+
+        console.error("ADMIN CREATE USER ERROR:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to create user"
+        });
+    }
+};
+
 export const getMyProfile = async (req, res) => {
     try {
         const user = await User.findOne({
@@ -73,31 +156,39 @@ export const getMyProfile = async (req, res) => {
         });
     }
 };
+
 export const getAllUsers = async (req, res) => {
     try {
         const page = Math.max(1, Number(req.query.page) || 1);
         const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
 
-        const { role, isActive } = req.query;
-       const search = (req.query.search || "").trim();
-        
-        // Search by name or email
-         if (search.length > 100) {
+        const search = (req.query.search || "").trim();
+
+        if (search.length > 100) {
             return res.status(400).json({
                 success: false,
                 message: "Search query cannot exceed 100 characters"
             });
         }
-        const filter = {};
 
-        // Filter by role
-        if (role && ["admin", "user"].includes(role)) {
-            filter.role = role;
-        }
+        // Always show regular users only
+        const filter = {
+            role: "user"
+        };
 
         // Filter by account status
-        if (isActive === "true" || isActive === "false") {
-            filter.isActive = isActive === "true";
+        if (req.query.isActive === "true" || req.query.isActive === "false") {
+            filter.isActive = req.query.isActive === "true";
+        }
+
+        // Search by name or email
+        if (search) {
+            const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+            filter.$or = [
+                { name: { $regex: safeSearch, $options: "i" } },
+                { email: { $regex: safeSearch, $options: "i" } }
+            ];
         }
 
         const skip = (page - 1) * limit;
@@ -110,7 +201,7 @@ export const getAllUsers = async (req, res) => {
 
         const totalUsers = await User.countDocuments(filter);
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             users,
             pagination: {
@@ -122,14 +213,13 @@ export const getAllUsers = async (req, res) => {
         });
 
     } catch (error) {
-    console.error("GET ALL USERS ERROR:", error);
+        console.error("GET ALL USERS ERROR:", error);
 
-    res.status(500).json({
-        success: false,
-        message: "Failed to fetch users",
-        error: error.message
-    });
-}
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch users"
+        });
+    }
 };
 
 export const updateUser = async (req, res) => {
@@ -299,6 +389,54 @@ export const updateUserStatus = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Failed to update user status"
+        });
+    }
+};
+
+export const updateMyProfile = async (req, res) => {
+    try {
+        const { name } = req.body;
+
+        if (typeof name !== "string" || !name.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: "Valid name is required"
+            });
+        }
+
+        if (name.trim().length > 100) {
+            return res.status(400).json({
+                success: false,
+                message: "Name cannot exceed 100 characters"
+            });
+        }
+
+        const user = await User.findOneAndUpdate(
+            { firebaseUid: req.user.uid },
+            { $set: { name: name.trim() } },
+            {
+                returnDocument: "after",
+                runValidators: true
+            }
+        ).select("-__v");
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User profile not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Profile updated successfully",
+            user
+        });
+    } catch (error) {
+        console.error("UPDATE MY PROFILE ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to update profile"
         });
     }
 };

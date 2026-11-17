@@ -1,7 +1,15 @@
 import express from "express";
 import verifyToken from "../middleware/authMiddleware.js";
-import { createUserProfile, getMyProfile,getAllUsers,updateUser,deleteUser,updateUserStatus,
-    getDashboardStats
+import {
+    createUserProfile,
+    getMyProfile,
+    updateMyProfile,
+    getAllUsers,
+    updateUser,
+    deleteUser,
+    updateUserStatus,
+    getDashboardStats,
+    adminCreateUser
 } from "../controllers/userController.js";
 import validateMiddleware from "../middleware/validateMiddleware.js";
 import {
@@ -19,13 +27,23 @@ router.post(
     verifyToken,
     validateMiddleware(createUserSchema),
     createUserProfile
-);router.get("/me", verifyToken, getMyProfile);
+);
+router.get("/me", verifyToken, getMyProfile);
+router.put("/me", verifyToken, updateMyProfile);
 
 router.get(
     "/admin/users",
     verifyToken,
     authorizeRoles("admin"),
     getAllUsers
+);
+
+// Admin: Create new user
+router.post(
+    "/admin/users",
+    verifyToken,
+    authorizeRoles("admin"),
+    adminCreateUser
 );
 router.put(
     "/admin/users/:id",

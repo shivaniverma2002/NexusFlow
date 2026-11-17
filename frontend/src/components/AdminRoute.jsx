@@ -3,6 +3,7 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useEffect, useState } from "react";
 
+
 const AdminRoute = () => {
     const { currentUser, loading: authLoading } = useAuth();
 
@@ -10,14 +11,16 @@ const AdminRoute = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (authLoading) return;
-
-        if (!currentUser) {
-            setLoading(false);
-            return;
-        }
+        let cancelled = false;
 
         const checkRole = async () => {
+            if (authLoading) return;
+
+            if (!currentUser) {
+                setLoading(false);
+                return;
+            }
+
             try {
                 const token = await currentUser.getIdToken();
 
@@ -33,24 +36,39 @@ const AdminRoute = () => {
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.message || "Role verification failed");
+                    throw new Error(data.message || "Access denied");
                 }
 
-                setRole(data.user?.role);
+                if (!cancelled) {
+                    setRole(data.user?.role);
+                }
 
             } catch (error) {
-                console.error("Role verification failed:", error);
-                setRole(null);
+                console.error("Admin verification failed:", error.message);
+
+                if (!cancelled) {
+                    setRole(null);
+                }
             } finally {
-                setLoading(false);
+                if (!cancelled) {
+                    setLoading(false);
+                }
             }
         };
 
         checkRole();
+
+        return () => {
+            cancelled = true;
+        };
     }, [currentUser, authLoading]);
 
     if (authLoading || loading) {
-        return <p className="p-8 text-center">Verifying admin access...</p>;
+        return (
+            <p className="p-8 text-center">
+                Verifying admin access...
+            </p>
+        );
     }
 
     if (!currentUser) {
@@ -58,7 +76,12 @@ const AdminRoute = () => {
     }
 
     if (role !== "admin") {
-        return <Navigate to="/dashboard" replace />;
+        return (
+            <Navigate
+                to={role === "user" ? "/dashboard" : "/login"}
+                replace
+            />
+        );
     }
 
     return <Outlet />;

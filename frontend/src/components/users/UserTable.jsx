@@ -1,5 +1,16 @@
 
-const UserTable = ({ users, loading, error }) => {
+import UserActions from "./UserActions.jsx";
+
+const UserTable = ({
+    users,
+    loading,
+    error,
+    onView,
+    onEdit,
+    onToggleStatus,
+    onDelete,
+    updatingStatus
+}) => {
     if (loading) {
         return (
             <p className="p-8 text-center text-sm text-slate-500">
@@ -18,17 +29,19 @@ const UserTable = ({ users, loading, error }) => {
 
     return (
         <div className="overflow-x-auto">
-            <table className="w-full min-w-[650px] text-left">
+            <table className="w-full min-w-[850px] text-left">
                 <thead className="bg-slate-50">
                     <tr>
-                        {["User", "Email", "Role", "Status"].map((heading) => (
-                            <th
-                                key={heading}
-                                className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500"
-                            >
-                                {heading}
-                            </th>
-                        ))}
+                        {["User", "Email", "Role", "Status", "Actions"].map(
+                            (heading) => (
+                                <th
+                                    key={heading}
+                                    className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500"
+                                >
+                                    {heading}
+                                </th>
+                            )
+                        )}
                     </tr>
                 </thead>
 
@@ -78,12 +91,23 @@ const UserTable = ({ users, loading, error }) => {
                                         {user.isActive ? "Active" : "Inactive"}
                                     </span>
                                 </td>
+
+                                <td className="px-6 py-4">
+                                    <UserActions
+                                        user={user}
+                                        onView={onView}
+                                        onEdit={onEdit}
+                                        onToggleStatus={onToggleStatus}
+                                        onDelete={onDelete}
+                                        updatingStatus={updatingStatus}
+                                    />
+                                </td>
                             </tr>
                         ))
                     ) : (
                         <tr>
                             <td
-                                colSpan="4"
+                                colSpan={5}
                                 className="px-6 py-12 text-center text-sm text-slate-500"
                             >
                                 No users found.

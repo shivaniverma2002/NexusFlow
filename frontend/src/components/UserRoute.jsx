@@ -5,19 +5,23 @@ import { useEffect, useState } from "react";
 
 const UserRoute = () => {
     const { currentUser, loading: authLoading } = useAuth();
-
     const [role, setRole] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let cancelled = false;
         if (authLoading) return;
 
-        if (!currentUser) {
-            setLoading(false);
-            return;
-        }
-
+        setLoading(true);
+        setRole(null);
         const checkRole = async () => {
+            if (authLoading) return;
+
+            if (!currentUser) {
+                setLoading(false);
+                return;
+            }
+
             try {
                 const token = await currentUser.getIdToken();
 
@@ -33,32 +37,36 @@ const UserRoute = () => {
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.message || "Role verification failed");
+                    throw new Error(data.message || "Access denied");
                 }
 
-                setRole(data.user?.role);
-
+                if (!cancelled) setRole(data.user?.role);
             } catch (error) {
-                console.error("Role verification failed:", error);
-                setRole(null);
+                console.error("User verification failed:", error.message);
+                if (!cancelled) setRole(null);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
         checkRole();
+
+        return () => {
+            cancelled = true;
+        };
     }, [currentUser, authLoading]);
 
     if (authLoading || loading) {
-        return <p className="p-8 text-center">Verifying user access...</p>;
+        return <p className="p-8 text-center">Verifying access...</p>;
     }
 
-    if (!currentUser) {
-        return <Navigate to="/login" replace />;
-    }
-
-    if (role !== "user") {
-        return <Navigate to="/admin/dashboard" replace />;
+    if (!currentUser || role !== "user") {
+        return (
+            <Navigate
+                to={role === "admin" ? "/admin/dashboard" : "/login"}
+                replace
+            />
+        );
     }
 
     return <Outlet />;

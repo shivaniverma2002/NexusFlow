@@ -1,10 +1,12 @@
 
 import {
-    BrowserRouter,
-    Routes,
-    Route,
-    Navigate
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate
 } from "react-router-dom";
+
+import { Toaster } from "sonner";
 
 import Register from "./pages/Register.jsx";
 import Login from "./pages/Login.jsx";
@@ -12,47 +14,79 @@ import Login from "./pages/Login.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 
+import Security from "./pages/admin/Security.jsx";
+import Settings from "./pages/admin/Settings.jsx";
+
 import AdminRoute from "./components/AdminRoute.jsx";
 import UserRoute from "./components/UserRoute.jsx";
 
+import UserSecurity from "./pages/UserSecurity.jsx";
+import UserSupport from "./pages/UserSupport.jsx";
+
 function App() {
-    return (
-        <BrowserRouter>
-            <Routes>
-                {/* Default route */}
-                <Route
-                    path="/"
-                    element={<Navigate to="/login" replace />}
-                />
+  return (
+    <BrowserRouter>
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        duration={3000}
+      />
 
-                {/* Public routes */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
+      <Routes>
+        {/* Public Routes */}
+        <Route
+          path="/"
+          element={<Navigate to="/login" replace />}
+        />
 
-                {/* Admin-only routes */}
-                <Route element={<AdminRoute />}>
-                    <Route
-                        path="/admin/dashboard"
-                        element={<AdminDashboard />}
-                    />
-                </Route>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-                {/* Normal User-only routes */}
-                <Route element={<UserRoute />}>
-                    <Route
-                        path="/dashboard"
-                        element={<Dashboard />}
-                    />
-                </Route>
+        {/* Protected Admin Routes */}
+        <Route element={<AdminRoute />}>
+          <Route
+            path="/admin/dashboard"
+            element={<AdminDashboard />}
+          />
 
-                {/* Unknown routes */}
-                <Route
-                    path="*"
-                    element={<Navigate to="/login" replace />}
-                />
-            </Routes>
-        </BrowserRouter>
-    );
+          <Route
+            path="/admin/security"
+            element={<Security />}
+          />
+
+          <Route
+            path="/admin/settings"
+            element={<Settings />}
+          />
+        </Route>
+
+        {/* Protected User Routes */}
+        <Route element={<UserRoute />}>
+          <Route
+            path="/dashboard"
+            element={<Dashboard />}
+          />
+
+          <Route
+            path="/dashboard/security"
+            element={<UserSecurity />}
+          />
+
+          <Route
+            path="/dashboard/support"
+            element={<UserSupport />}
+          />
+        </Route>
+
+        {/* Fallback */}
+        <Route
+          path="*"
+          element={<Navigate to="/login" replace />}
+        />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App;

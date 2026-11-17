@@ -2,7 +2,6 @@
 import {
     Search,
     Bell,
-    Sparkles,
     LogOut
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -58,10 +57,7 @@ const Topbar = () => {
                 </div>
 
                 {/* AI badge */}
-                <button className="hidden items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-3 py-2.5 text-xs font-semibold text-white shadow-md shadow-indigo-100 transition hover:-translate-y-0.5 hover:shadow-lg sm:flex">
-                    <Sparkles size={15} />
-                    AI Copilot
-                </button>
+              
 
                 {/* Notifications */}
                 <button

@@ -20,6 +20,8 @@
     "react-hot-toast": "^2.6.1",
     "react-router-dom": "^7.18.5",
     "recharts": "^3.10.1",
+    "sonner": "^2.0.8",
+    "sweetalert2": "^11.26.25",
     "tailwindcss": "^4.3.5"
   },
   "devDependencies": {
