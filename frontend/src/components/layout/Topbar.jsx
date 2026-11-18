@@ -17,7 +17,7 @@ import { auth } from "../../config/firebase.js";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
-const API_URL = "${import.meta.env.VITE_API_URL}/support";
+const API_URL= `${import.meta.env.VITE_API_URL}/api/support`;
 
 const Topbar = () => {
     const { currentUser } = useAuth();
