@@ -61,7 +61,7 @@ const UserSupport = () => {
             const token = await currentUser.getIdToken();
 
             const response = await fetch(
-                `${API_URL}/support`,
+                `${API_URL}/api/support`,
                 {
                     method: "POST",
                     headers: {

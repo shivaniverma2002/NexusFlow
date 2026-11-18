@@ -24,6 +24,7 @@ import {
     Sparkles,
     LoaderCircle
 } from "lucide-react";
+import { API_URL } from "../config/apiConfig.js";
 import { logoutUser } from "../services/authService.js";
 export default function Login() {
     const navigate = useNavigate();
@@ -34,13 +35,12 @@ export default function Login() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
-    const API_URL = import.meta.env.VITE_API_URL;
 
     const redirectUser = async (user) => {
         const token = await user.getIdToken();
 
         const response = await fetch(
-            `${API_URL}/users/me`,
+            `${API_URL}/api/users/me`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`

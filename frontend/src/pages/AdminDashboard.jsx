@@ -17,6 +17,7 @@ import AddUserModal from "../components/users/AddUserModal.jsx";
 import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import Swal from "sweetalert2";
+import API_URL from "../config/api.js";
 const AdminDashboard = () => {
     // Users state
     const [users, setUsers] = useState([]);
@@ -33,7 +34,7 @@ const AdminDashboard = () => {
     // Pagination state
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-   const API_URL = import.meta.env.VITE_API_URL;
+   
     // Dashboard statistics state
     const [stats, setStats] = useState(null);
     const [statsError, setStatsError] = useState("");
@@ -67,7 +68,7 @@ const AdminDashboard = () => {
             const token = await currentUser.getIdToken();
 
             const response = await fetch(
-                `${API_URL}/users/admin/users/${userId}`,
+                `${API_URL}/api/users/admin/users/${userId}`,
                 {
                     method: "PUT",
                     headers: {
@@ -137,7 +138,7 @@ const handleToggleStatus = async (user) => {
         const token = await currentUser.getIdToken();
 
         const response = await fetch(
-            `${API_URL}/users/admin/users/${user._id}/status`,
+            `${API_URL}/api/users/admin/users/${user._id}/status`,
             {
                 method: "PATCH",
                 headers: {
@@ -207,7 +208,7 @@ const handleDeleteUser = async (user) => {
         const token = await currentUser.getIdToken();
 
         const response = await fetch(
-            `http://localhost:5000/api/users/admin/users/${user._id}`,
+            `${API_URL}/api/users/admin/users/${user._id}`,
             {
                 method: "DELETE",
                 headers: {
@@ -246,7 +247,7 @@ const handleDeleteUser = async (user) => {
             const token = await auth.currentUser.getIdToken();
 
             const response = await fetch(
-                `${API_URL}/users/admin/users`,
+                `${API_URL}/api/users/admin/users`,
                 {
                     method: "POST",
                     headers: {
@@ -299,7 +300,7 @@ const handleDeleteUser = async (user) => {
                 const token = await currentUser.getIdToken();
 
                 const response = await fetch(
-                    `${API_URL}/users/admin/users?page=${page}&limit=10&search=${encodeURIComponent(search)}&role=${role === "all" ? "" : role}&isActive=${status === "all" ? "" : status}`,
+                    `${API_URL}/api/users/admin/users?page=${page}&limit=10&search=${encodeURIComponent(search)}&role=${role === "all" ? "" : role}&isActive=${status === "all" ? "" : status}`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
@@ -343,7 +344,7 @@ const handleDeleteUser = async (user) => {
                 const token = await currentUser.getIdToken();
 
                 const response = await fetch(
-                    `${API_URL}/users/admin/stats`,
+                    `${API_URL}/api/users/admin/stats`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
