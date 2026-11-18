@@ -29,7 +29,9 @@ app.use(
 // CORS configuration
 const allowedOrigins = [
     "http://localhost:5173",
-    "http://localhost:5174"
+    "http://localhost:5174",
+    "http://localhost:5173",
+  "https://nexus-flow-ai-psi.vercel.app",
 ];
 
 if (process.env.FRONTEND_URL) {
