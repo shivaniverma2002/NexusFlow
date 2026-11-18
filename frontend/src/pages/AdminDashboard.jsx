@@ -33,7 +33,7 @@ const AdminDashboard = () => {
     // Pagination state
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-
+   const API_URL = import.meta.env.VITE_API_URL;
     // Dashboard statistics state
     const [stats, setStats] = useState(null);
     const [statsError, setStatsError] = useState("");
@@ -67,7 +67,7 @@ const AdminDashboard = () => {
             const token = await currentUser.getIdToken();
 
             const response = await fetch(
-                `http://localhost:5000/api/users/admin/users/${userId}`,
+                `${API_URL}/users/admin/users/${userId}`,
                 {
                     method: "PUT",
                     headers: {
@@ -137,7 +137,7 @@ const handleToggleStatus = async (user) => {
         const token = await currentUser.getIdToken();
 
         const response = await fetch(
-            `http://localhost:5000/api/users/admin/users/${user._id}/status`,
+            `${API_URL}/users/admin/users/${user._id}/status`,
             {
                 method: "PATCH",
                 headers: {
@@ -246,7 +246,7 @@ const handleDeleteUser = async (user) => {
             const token = await auth.currentUser.getIdToken();
 
             const response = await fetch(
-                "http://localhost:5000/api/users/admin/users",
+                `${API_URL}/users/admin/users`,
                 {
                     method: "POST",
                     headers: {
@@ -299,7 +299,7 @@ const handleDeleteUser = async (user) => {
                 const token = await currentUser.getIdToken();
 
                 const response = await fetch(
-                    `http://localhost:5000/api/users/admin/users?page=${page}&limit=10&search=${encodeURIComponent(search)}&role=${role === "all" ? "" : role}&isActive=${status === "all" ? "" : status}`,
+                    `${API_URL}/users/admin/users?page=${page}&limit=10&search=${encodeURIComponent(search)}&role=${role === "all" ? "" : role}&isActive=${status === "all" ? "" : status}`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
@@ -343,7 +343,7 @@ const handleDeleteUser = async (user) => {
                 const token = await currentUser.getIdToken();
 
                 const response = await fetch(
-                    "http://localhost:5000/api/users/admin/stats",
+                    `${API_URL}/users/admin/stats`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`

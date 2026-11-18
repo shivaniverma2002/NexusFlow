@@ -28,6 +28,7 @@ import {
 
 export default function Register() {
     const navigate = useNavigate();
+    const API_URL = import.meta.env.VITE_API_URL;
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -79,7 +80,7 @@ export default function Register() {
             const token = await createdUser.getIdToken();
 
             const response = await fetch(
-                "http://localhost:5000/api/users/profile",
+                `${API_URL}/users/profile`,
                 {
                     method: "POST",
                     headers: {
@@ -136,7 +137,7 @@ export default function Register() {
             const token = await user.getIdToken();
 
             const response = await fetch(
-                "http://localhost:5000/api/users/profile",
+                `${API_URL}/users/profile`,
                 {
                     method: "POST",
                     headers: {

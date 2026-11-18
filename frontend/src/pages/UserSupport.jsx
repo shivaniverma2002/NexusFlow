@@ -22,6 +22,7 @@ const UserSupport = () => {
     });
 
     const [loading, setLoading] = useState(false);
+    const API_URL = import.meta.env.VITE_API_URL;
 
     const handleChange = (e) => {
         setForm((previous) => ({
@@ -60,7 +61,7 @@ const UserSupport = () => {
             const token = await currentUser.getIdToken();
 
             const response = await fetch(
-                "${import.meta.env.VITE_API_URL}/support",
+                `${API_URL}/support`,
                 {
                     method: "POST",
                     headers: {

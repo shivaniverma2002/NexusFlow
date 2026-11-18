@@ -34,12 +34,13 @@ export default function Login() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+    const API_URL = import.meta.env.VITE_API_URL;
 
     const redirectUser = async (user) => {
         const token = await user.getIdToken();
 
         const response = await fetch(
-            "http://localhost:5000/api/users/me",
+            `${API_URL}/users/me`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`
