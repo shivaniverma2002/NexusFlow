@@ -15,12 +15,12 @@ const verifyToken = async (req, res, next) => {
 
         const token = authHeader.split(" ")[1];
 
-        if (!token) {
-            return res.status(401).json({
-                success: false,
-                message: "Authentication token required"
-            });
-        }
+        if (scheme !== "Bearer" || !token) {
+    return res.status(401).json({
+        success: false,
+        message: "Authentication token required"
+    });
+}
 
         // Verify JWT
       if (!process.env.JWT_SECRET) {

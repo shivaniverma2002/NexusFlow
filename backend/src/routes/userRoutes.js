@@ -8,7 +8,6 @@ import validateMiddleware from "../middleware/validateMiddleware.js";
 import {
     registerUser,
     loginUser,
-    createUserProfile,
     getMyProfile,
     updateMyProfile,
     getAllUsers,
@@ -20,7 +19,6 @@ import {
 } from "../controllers/userController.js";
 
 import {
-    createUserSchema,
     registerUserSchema,
     loginUserSchema,
     updateUserSchema,
@@ -30,14 +28,20 @@ import {
 
 const router = express.Router();
 
-// Authenticated user profile routes
+// Public authentication routes
 router.post(
-    "/profile",
-    verifyToken,
-    validateMiddleware(createUserSchema),
-    createUserProfile
+    "/register",
+    validateMiddleware(registerUserSchema),
+    registerUser
 );
 
+router.post(
+    "/login",
+    validateMiddleware(loginUserSchema),
+    loginUser
+);
+
+// Authenticated user profile routes
 router.get(
     "/me",
     verifyToken,
@@ -95,16 +99,5 @@ router.get(
     authorizeRoles("admin"),
     getDashboardStats
 );
-// Public authentication routes
-router.post(
-    "/register",
-    validateMiddleware(registerUserSchema),
-    registerUser
-);
 
-router.post(
-    "/login",
-    validateMiddleware(loginUserSchema),
-    loginUser
-);
 export default router;
