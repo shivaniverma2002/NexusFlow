@@ -37,7 +37,7 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
+   
 
     try {
         setLoading(true);
@@ -286,12 +286,7 @@ const handleForgotPassword = () => {
                         </div>
                     )}
 
-                    {/* Success */}
-                    {success && (
-                        <div className="p-3 mb-5 rounded-lg bg-green-50 border border-green-100 text-green-700 text-sm">
-                            {success}
-                        </div>
-                    )}
+                  
 
                     <form onSubmit={handleLogin} className="space-y-5">
 
