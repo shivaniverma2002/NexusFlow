@@ -1,7 +1,6 @@
 
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
 import {
@@ -23,7 +22,8 @@ import {
 
 export default function Login() {
     const navigate = useNavigate();
-
+    const location = useLocation();
+    const [success, setSuccess] = useState(location.state?.message || "");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -31,33 +31,39 @@ export default function Login() {
     const [error, setError] = useState("");
 
     const { login } = useAuth();
+    // Clear navigation state but keep the message visible
+    useEffect(() => {
+        if (location.state?.message) {
+            navigate(location.pathname, {
+                replace: true,
+                state: null
+            });
+        }
+    }, [location.state, location.pathname, navigate]);
 
-   
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setError("");
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
-   
+        try {
+            setLoading(true);
 
-    try {
-        setLoading(true);
+            const result = await login(email.trim(), password);
 
-        const result = await login(email.trim(), password);
+            navigate(
+                result.user.role === "admin"
+                    ? "/admin/dashboard"
+                    : "/dashboard",
+                { replace: true }
+            );
 
-        navigate(
-            result.user.role === "admin"
-                ? "/admin/dashboard"
-                : "/dashboard",
-            { replace: true }
-        );
-
-    } catch (err) {
-        console.error("Login failed:", err);
-        setError(err.message || "Login failed. Please try again.");
-    } finally {
-        setLoading(false);
-    }
-};
+        } catch (err) {
+            console.error("Login failed:", err);
+            setError(err.message || "Login failed. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // const handleGoogleLogin = async () => {
     //     setError("");
@@ -78,9 +84,9 @@ export default function Login() {
     //     }
     // };
 
-const handleForgotPassword = () => {
-    setError("Password reset is not available yet. Please contact the administrator.");
-};
+    const handleForgotPassword = () => {
+        setError("Password reset is not available yet. Please contact the administrator.");
+    };
     return (
         <div className="min-h-screen grid lg:grid-cols-2 bg-white">
 
@@ -280,13 +286,20 @@ const handleForgotPassword = () => {
                     </div>
 
                     {/* Error */}
+                    {/* Registration Success Message */}
+                    {successMessage && (
+                        <div className="p-3 mb-5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
+                            {successMessage}
+                        </div>
+                    )}
+
+                    {/* Login Error */}
                     {error && (
                         <div className="p-3 mb-5 rounded-lg bg-red-50 border border-red-100 text-red-700 text-sm">
                             {error}
                         </div>
                     )}
 
-                  
 
                     <form onSubmit={handleLogin} className="space-y-5">
 
@@ -381,9 +394,9 @@ const handleForgotPassword = () => {
                     </form>
 
                     {/* Divider */}
-                    
 
-                 
+
+
                     {/* Signup link */}
                     <p className="text-center text-sm text-slate-500 mt-8">
                         Don't have an account?{" "}

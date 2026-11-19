@@ -60,7 +60,12 @@ export default function Register() {
 
             await register(cleanName, cleanEmail, password);
 
-            navigate("/dashboard", { replace: true });
+            navigate("/login", {
+                replace: true,
+                state: {
+                    message: "Account created successfully. Please log in."
+                }
+            });
 
         } catch (err) {
             console.error("Registration failed:", err);
@@ -327,6 +332,7 @@ export default function Register() {
                         </div>
 
                         {/* Password */}
+                        {/* Password */}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">
                                 Password
@@ -345,6 +351,7 @@ export default function Register() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="Minimum 8 characters"
+                                    className="w-full border border-slate-200 rounded-xl py-3 pl-11 pr-12 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                                 />
 
                                 <button
@@ -375,6 +382,7 @@ export default function Register() {
                                 <input
                                     type={showConfirmPassword ? "text" : "password"}
                                     required
+                                    minLength={8}
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     placeholder="Confirm your password"

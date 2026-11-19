@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
     );
     const [loading, setLoading] = useState(true);
 
-    // Verify existing token when the application loads
+    // Verify existing JWT session when application loads
     useEffect(() => {
         const verifySession = async () => {
             const savedToken = sessionStorage.getItem("token");
@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }) => {
 
                 const data = await response.json();
 
-                if (!response.ok) {
+                if (!response.ok || !data.user) {
                     sessionStorage.removeItem("token");
                     setToken(null);
                     setCurrentUser(null);
@@ -47,6 +47,7 @@ export const AuthProvider = ({ children }) => {
                 }
 
                 setCurrentUser(data.user);
+                setToken(savedToken);
 
             } catch (error) {
                 console.error("SESSION VERIFICATION ERROR:", error);
@@ -58,28 +59,64 @@ export const AuthProvider = ({ children }) => {
         verifySession();
     }, []);
 
-    // Login and registration
-    const authenticate = async (endpoint, credentials) => {
+    // Registration: Create account without logging in
+    const register = async (name, email, password) => {
         const response = await fetch(
-            `${API_URL}/api/users/${endpoint}`,
+            `${API_URL}/api/users/register`,
             {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify(credentials)
+                body: JSON.stringify({
+                    name,
+                    email,
+                    password
+                })
             }
         );
 
-       const data = await response.json();
+        const data = await response.json();
 
-if (!response.ok) {
-    throw new Error(data.message || "Authentication failed");
-}
+        if (!response.ok) {
+            throw new Error(
+                data.message || "Registration failed"
+            );
+        }
 
-if (!data.token || !data.user) {
-    throw new Error("Invalid authentication response from server");
-}
+        // Do not save JWT or authenticate after registration
+        return data;
+    };
+
+    // Login: Authenticate and save JWT
+    const login = async (email, password) => {
+        const response = await fetch(
+            `${API_URL}/api/users/login`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    email,
+                    password
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.message || "Login failed"
+            );
+        }
+
+        if (!data.token || !data.user) {
+            throw new Error(
+                "Invalid authentication response from server"
+            );
+        }
 
         sessionStorage.setItem("token", data.token);
 
@@ -89,21 +126,10 @@ if (!data.token || !data.user) {
         return data;
     };
 
-    const login = async (email, password) => {
-        return authenticate("login", { email, password });
-    };
-
-    const register = async (name, email, password) => {
-        return authenticate("register", {
-            name,
-            email,
-            password
-        });
-    };
-
     // Logout
     const logout = () => {
         sessionStorage.removeItem("token");
+
         setToken(null);
         setCurrentUser(null);
     };
