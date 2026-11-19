@@ -33,42 +33,42 @@ export default function Register() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-   const handleRegister = async (e) => {
-    e.preventDefault();
-    setError("");
+    const handleRegister = async (e) => {
+        e.preventDefault();
+        setError("");
 
-    const cleanName = name.trim();
-    const cleanEmail = email.trim().toLowerCase();
+        const cleanName = name.trim();
+        const cleanEmail = email.trim().toLowerCase();
 
-    if (!cleanName) {
-        setError("Please enter your full name.");
-        return;
-    }
+        if (!cleanName) {
+            setError("Please enter your full name.");
+            return;
+        }
 
-    if (password.length < 8) {
-        setError("Password must contain at least 8 characters.");
-        return;
-    }
+        if (password.length < 8) {
+            setError("Password must contain at least 8 characters.");
+            return;
+        }
 
-    if (password !== confirmPassword) {
-        setError("Passwords do not match.");
-        return;
-    }
+        if (password !== confirmPassword) {
+            setError("Passwords do not match.");
+            return;
+        }
 
-    try {
-        setLoading(true);
+        try {
+            setLoading(true);
 
-        await register(cleanName, cleanEmail, password);
+            await register(cleanName, cleanEmail, password);
 
-        navigate("/dashboard", { replace: true });
+            navigate("/dashboard", { replace: true });
 
-    } catch (err) {
-        console.error("Registration failed:", err);
-        setError(err.message || "Registration failed. Please try again.");
-    } finally {
-        setLoading(false);
-    }
-};
+        } catch (err) {
+            console.error("Registration failed:", err);
+            setError(err.message || "Registration failed. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
 
 
@@ -341,11 +341,10 @@ export default function Register() {
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     required
-                                    minLength={6}
+                                    minLength={8}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Minimum 6 characters"
-                                    className="w-full border border-slate-200 rounded-xl py-3 pl-11 pr-12 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                    placeholder="Minimum 8 characters"
                                 />
 
                                 <button
@@ -416,27 +415,9 @@ export default function Register() {
 
                     </form>
 
-                    <div className="relative my-7">
-                        <div className="border-t border-slate-200" />
-                        <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-white px-4 text-sm text-slate-400">
-                            OR
-                        </span>
-                    </div>
 
-                    <button
-                        type="button"
-                        onClick={handleGoogleSignup}
-                        disabled={loading}
-                        className="w-full flex items-center justify-center gap-3 border border-slate-200 rounded-xl py-3 font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
-                    >
-                        <svg viewBox="0 0 48 48" className="w-5 h-5" aria-hidden="true">
-                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 3.2 13.22l7.98 6.19C13.08 13.72 18.11 9.5 24 9.5z" transform="translate(0 4)" />
-                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.72 7.18l7.62 5.91c4.45-4.1 7.14-10.14 7.14-17.56z" />
-                            <path fill="#FBBC05" d="M10.18 28.59a14.4 14.4 0 0 1 0-9.18L2.2 13.22a23.9 23.9 0 0 0 0 21.56l7.98-6.19z" />
-                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.89l-7.62-5.91c-2.12 1.42-4.84 2.27-8.29 2.27-5.89 0-10.92-4.22-12.82-9.91L3.2 34.78C6.51 42.62 14.62 48 24 48z" />
-                        </svg>
-                        Continue with Google
-                    </button>
+
+
 
 
                     {/* Login link */}
