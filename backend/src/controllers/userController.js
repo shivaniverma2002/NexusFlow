@@ -11,10 +11,13 @@ export const registerUser = async (req, res) => {
         const normalizedEmail = email.trim().toLowerCase();
 
         // Check if email already exists
+        console.log("REGISTER EMAIL:", normalizedEmail);
+
         const existingUser = await User.findOne({
             email: normalizedEmail
         });
 
+        console.log("EXISTING USER:", existingUser ? existingUser.email : "NOT FOUND");
         if (existingUser) {
             return res.status(409).json({
                 success: false,
