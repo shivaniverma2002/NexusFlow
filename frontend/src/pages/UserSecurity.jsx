@@ -1,6 +1,6 @@
 
 import UserLayout from "../components/layout/UserLayout.jsx";
-import { auth } from "../config/firebase.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 import {
     ShieldCheck,
@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 const UserSecurity = () => {
-    const user = auth.currentUser;
+    const { currentUser, token } = useAuth();
 
     return (
         <UserLayout>
@@ -50,14 +50,23 @@ const UserSecurity = () => {
                                 Authentication
                             </h3>
                             <p className="text-xs text-slate-500">
-                                Firebase Authentication
+                                JWT Authentication
                             </p>
                         </div>
                     </div>
 
                     <div className="mt-5 flex items-center gap-2 text-sm text-emerald-600">
-                        <CheckCircle2 size={18} />
-                        Authentication provider configured
+                        {token ? (
+                            <>
+                                <CheckCircle2 size={18} />
+                                JWT authentication active
+                            </>
+                        ) : (
+                            <>
+                                <AlertTriangle size={18} />
+                                Authentication session unavailable
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -77,7 +86,7 @@ const UserSecurity = () => {
                     </div>
 
                     <p className="mt-5 break-all text-sm font-medium text-slate-700">
-                        {user?.email || "Email unavailable"}
+                        {currentUser?.email || "Email unavailable"}
                     </p>
                 </div>
 
@@ -97,7 +106,7 @@ const UserSecurity = () => {
                     </div>
 
                     <p className="mt-5 text-sm leading-6 text-slate-500">
-                        NexusFlow uses Firebase ID tokens to authenticate requests
+                        NexusFlow uses JWT access tokens to authenticate requests
                         to protected backend endpoints.
                     </p>
                 </div>

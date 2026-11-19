@@ -1,61 +1,148 @@
 import User from "../models/User.js";
 import mongoose from "mongoose";
-import { auth } from "../config/firebaseAdmin.js";
-
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 // Create or retrieve user profile
-export const createUserProfile = async (req, res) => {
+// Register a new user
+export const registerUser = async (req, res) => {
     try {
-        const { name } = req.body;
+        const { name, email, password } = req.body;
 
-        // Get verified Firebase user details
-        const firebaseUid = req.user.uid;
-        const email = req.user.email;
+        const normalizedEmail = email.trim().toLowerCase();
 
-        if (!name || !email) {
-            return res.status(400).json({
+        // Check if email already exists
+        const existingUser = await User.findOne({
+            email: normalizedEmail
+        });
+
+        if (existingUser) {
+            return res.status(409).json({
                 success: false,
-                message: "Name and email are required"
+                message: "Email already registered"
             });
         }
 
-        // Find existing profile or create a new one
-        const user = await User.findOneAndUpdate(
-            { firebaseUid },
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        // Create user
+        const user = await User.create({
+            name: name.trim(),
+            email: normalizedEmail,
+            password: hashedPassword,
+            role: "user",
+            isActive: true
+        });
+
+        // Generate JWT
+        const token = jwt.sign(
+            { userId: user._id.toString() },
+            process.env.JWT_SECRET,
             {
-                $setOnInsert: {
-                    firebaseUid,
-                    name,
-                    email,
-                    role: "user"
-                }
-            },
-            {
-                 returnDocument: "after",
-                upsert: true,
-                runValidators: true
+                expiresIn: "1d",
+                algorithm: "HS256"
             }
         );
 
-        res.status(200).json({
+        const safeUser = await User.findById(user._id)
+            .select("-password -__v");
+
+        return res.status(201).json({
             success: true,
-            message: "User profile saved successfully",
-            user
+            message: "Registration successful",
+            token,
+            user: safeUser
         });
 
     } catch (error) {
-        res.status(500).json({
+        console.error("REGISTER ERROR:", error);
+
+        if (error.code === 11000) {
+            return res.status(409).json({
+                success: false,
+                message: "Email already registered"
+            });
+        }
+
+        return res.status(500).json({
             success: false,
-            message: "Failed to save user profile"
+            message: "Registration failed"
         });
     }
 };
-
 // Admin: Create a new user or administrator
+// Login existing user
+export const loginUser = async (req, res) => {
+    try {
+        const { email, password } = req.body;
 
+        const normalizedEmail = email.trim().toLowerCase();
+
+        // Find user and explicitly include password
+        const user = await User.findOne({
+            email: normalizedEmail
+        }).select("+password");
+
+        if (!user || !user.password) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid email or password. Existing accounts may need password setup."
+            });
+        }
+
+        // Verify password
+        const isPasswordValid = await bcrypt.compare(
+            password,
+            user.password
+        );
+
+        if (!isPasswordValid) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid email or password"
+            });
+        }
+
+        // Check account status
+        if (!user.isActive) {
+            return res.status(403).json({
+                success: false,
+                message: "Your account is deactivated"
+            });
+        }
+
+        // Generate JWT
+        const token = jwt.sign(
+            { userId: user._id.toString() },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "1d",
+                algorithm: "HS256"
+            }
+        );
+
+        // Remove sensitive fields
+        const safeUser = await User.findById(user._id)
+            .select("-password -__v");
+
+        return res.status(200).json({
+            success: true,
+            message: "Login successful",
+            token,
+            user: safeUser
+        });
+
+    } catch (error) {
+        console.error("LOGIN ERROR:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Login failed"
+        });
+    }
+};
 // Admin can create NORMAL USERS only
 export const adminCreateUser = async (req, res) => {
-    let firebaseUser;
-
     try {
         const { name, email, password } = req.body;
 
@@ -66,10 +153,10 @@ export const adminCreateUser = async (req, res) => {
             });
         }
 
-        if (password.length < 6) {
+        if (password.length < 8) {
             return res.status(400).json({
                 success: false,
-                message: "Password must contain at least 6 characters"
+                message: "Password must contain at least 8 characters"
             });
         }
 
@@ -86,37 +173,26 @@ export const adminCreateUser = async (req, res) => {
             });
         }
 
-        // Create Firebase account
-        firebaseUser = await auth.createUser({
-            email: normalizedEmail,
-            password,
-            displayName: name.trim()
-        });
+        const hashedPassword = await bcrypt.hash(password, 12);
 
-        // Always assign user role
         const user = await User.create({
-            firebaseUid: firebaseUser.uid,
             name: name.trim(),
             email: normalizedEmail,
+            password: hashedPassword,
             role: "user",
             isActive: true
         });
 
+        const safeUser = await User.findById(user._id)
+            .select("-password -__v");
+
         return res.status(201).json({
             success: true,
             message: "User created successfully",
-            user
+            user: safeUser
         });
 
     } catch (error) {
-        if (firebaseUser) {
-            try {
-                await auth.deleteUser(firebaseUser.uid);
-            } catch (rollbackError) {
-                console.error("Firebase rollback failed:", rollbackError.message);
-            }
-        }
-
         console.error("ADMIN CREATE USER ERROR:", error);
 
         return res.status(500).json({
@@ -128,9 +204,8 @@ export const adminCreateUser = async (req, res) => {
 
 export const getMyProfile = async (req, res) => {
     try {
-        const user = await User.findOne({
-            firebaseUid: req.user.uid
-        }).select("-__v");
+        const user = await User.findById(req.user.dbUserId)
+            .select("-password -__v");
 
         if (!user) {
             return res.status(404).json({
@@ -139,12 +214,15 @@ export const getMyProfile = async (req, res) => {
             });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             user
         });
+
     } catch (error) {
-        res.status(500).json({
+        console.error("GET MY PROFILE ERROR:", error);
+
+        return res.status(500).json({
             success: false,
             message: "Failed to fetch user profile"
         });
@@ -188,7 +266,7 @@ export const getAllUsers = async (req, res) => {
         const skip = (page - 1) * limit;
 
         const users = await User.find(filter)
-            .select("-__v")
+            .select("-password -__v")
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
@@ -292,7 +370,17 @@ export const deleteUser = async (req, res) => {
             });
         }
 
-        const user = await User.findById(id);
+        if (id === req.user.dbUserId.toString()) {
+            return res.status(400).json({
+                success: false,
+                message: "You cannot delete your own account"
+            });
+        }
+
+        const user = await User.findOneAndDelete({
+            _id: id,
+            role: "user"
+        });
 
         if (!user) {
             return res.status(404).json({
@@ -301,33 +389,20 @@ export const deleteUser = async (req, res) => {
             });
         }
 
-        // Prevent deleting your own account
-        if (user.firebaseUid === req.user.uid) {
-            return res.status(400).json({
-                success: false,
-                message: "You cannot delete your own account"
-            });
-        }
-
-        // Delete Firebase account first
-        await auth.deleteUser(user.firebaseUid);
-
-        // Delete MongoDB profile
-        await User.findByIdAndDelete(id);
-
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "User deleted successfully"
         });
 
     } catch (error) {
-        res.status(500).json({
+        console.error("DELETE USER ERROR:", error);
+
+        return res.status(500).json({
             success: false,
             message: "Failed to delete user"
         });
     }
 };
-
 export const updateUserStatus = async (req, res) => {
     try {
         const { id } = req.params;
@@ -347,7 +422,21 @@ export const updateUserStatus = async (req, res) => {
             });
         }
 
-        const user = await User.findById(id);
+        if (
+            id === req.user.dbUserId.toString() &&
+            !isActive
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "You cannot deactivate your own account"
+            });
+        }
+
+        const user = await User.findOneAndUpdate(
+            { _id: id, role: "user" },
+            { $set: { isActive } },
+            { new: true, runValidators: true }
+        ).select("-password -__v");
 
         if (!user) {
             return res.status(404).json({
@@ -356,29 +445,16 @@ export const updateUserStatus = async (req, res) => {
             });
         }
 
-        if (user.firebaseUid === req.user.uid && !isActive) {
-            return res.status(400).json({
-                success: false,
-                message: "You cannot deactivate your own account"
-            });
-        }
-
-        user.isActive = isActive;
-        await user.save();
-
-        // Revoke existing Firebase refresh tokens when deactivating.
-        if (!isActive) {
-            await auth.revokeRefreshTokens(user.firebaseUid);
-        }
-
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: `User ${isActive ? "activated" : "deactivated"} successfully`,
             user
         });
 
     } catch (error) {
-        res.status(500).json({
+        console.error("UPDATE USER STATUS ERROR:", error);
+
+        return res.status(500).json({
             success: false,
             message: "Failed to update user status"
         });
@@ -389,28 +465,22 @@ export const updateMyProfile = async (req, res) => {
     try {
         const { name } = req.body;
 
-        if (typeof name !== "string" || !name.trim()) {
+        if (
+            typeof name !== "string" ||
+            name.trim().length < 2 ||
+            name.trim().length > 100
+        ) {
             return res.status(400).json({
                 success: false,
-                message: "Valid name is required"
+                message: "Name must be between 2 and 100 characters"
             });
         }
 
-        if (name.trim().length > 100) {
-            return res.status(400).json({
-                success: false,
-                message: "Name cannot exceed 100 characters"
-            });
-        }
-
-        const user = await User.findOneAndUpdate(
-            { firebaseUid: req.user.uid },
+        const user = await User.findByIdAndUpdate(
+            req.user.dbUserId,
             { $set: { name: name.trim() } },
-            {
-                returnDocument: "after",
-                runValidators: true
-            }
-        ).select("-__v");
+            { new: true, runValidators: true }
+        ).select("-password -__v");
 
         if (!user) {
             return res.status(404).json({
@@ -424,15 +494,16 @@ export const updateMyProfile = async (req, res) => {
             message: "Profile updated successfully",
             user
         });
+
     } catch (error) {
         console.error("UPDATE MY PROFILE ERROR:", error);
+
         return res.status(500).json({
             success: false,
             message: "Failed to update profile"
         });
     }
 };
-
 export const getDashboardStats = async (req, res) => {
     try {
         const [

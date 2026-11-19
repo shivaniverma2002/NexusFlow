@@ -1,13 +1,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-    createUserWithEmailAndPassword,
-    updateProfile,
-    deleteUser
-} from "firebase/auth";
-import { auth, googleProvider } from "../config/firebase.js";
-import { signInWithPopup } from "firebase/auth";
+import { useAuth } from "../context/AuthContext.jsx";
 import {
     UserRound,
     Mail,
@@ -28,7 +22,7 @@ import {
 
 export default function Register() {
     const navigate = useNavigate();
-    const API_URL = import.meta.env.VITE_API_URL;
+    const { register } = useAuth();
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -39,138 +33,43 @@ export default function Register() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    const handleRegister = async (e) => {
-        e.preventDefault();
-        setError("");
+   const handleRegister = async (e) => {
+    e.preventDefault();
+    setError("");
 
-        const cleanName = name.trim();
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
 
-        if (!cleanName) {
-            setError("Please enter your full name.");
-            return;
-        }
+    if (!cleanName) {
+        setError("Please enter your full name.");
+        return;
+    }
 
-        if (password.length < 6) {
-            setError("Password must contain at least 6 characters.");
-            return;
-        }
+    if (password.length < 8) {
+        setError("Password must contain at least 8 characters.");
+        return;
+    }
 
-        if (password !== confirmPassword) {
-            setError("Passwords do not match.");
-            return;
-        }
+    if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+    }
 
-        let createdUser = null;
+    try {
+        setLoading(true);
 
-        try {
-            setLoading(true);
+        await register(cleanName, cleanEmail, password);
 
-            const result = await createUserWithEmailAndPassword(
-                auth,
-                email.trim(),
-                password
-            );
+        navigate("/dashboard", { replace: true });
 
-            createdUser = result.user;
+    } catch (err) {
+        console.error("Registration failed:", err);
+        setError(err.message || "Registration failed. Please try again.");
+    } finally {
+        setLoading(false);
+    }
+};
 
-            await updateProfile(createdUser, {
-                displayName: cleanName
-            });
-
-            const token = await createdUser.getIdToken();
-
-            const response = await fetch(
-                `${API_URL}/users/profile`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        name: cleanName
-                    })
-                }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(
-                    data.message || "Profile creation failed"
-                );
-            }
-
-            navigate("/dashboard", { replace: true });
-
-        } catch (err) {
-            console.error("Registration failed:", err);
-
-            // Roll back Firebase account if MongoDB profile creation fails
-            if (createdUser) {
-                try {
-                    await deleteUser(createdUser);
-                } catch (rollbackError) {
-                    console.error(
-                        "Account rollback failed:",
-                        rollbackError
-                    );
-                }
-            }
-
-            setError(
-                err.message || "Registration failed. Please try again."
-            );
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleGoogleSignup = async () => {
-        try {
-            setLoading(true);
-            setError("");
-
-            const result = await signInWithPopup(auth, googleProvider);
-            const user = result.user;
-
-            const token = await user.getIdToken();
-
-            const response = await fetch(
-                `${API_URL}/users/profile`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        name: user.displayName || user.email.split("@")[0]
-                    })
-                }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                // An existing profile may mean this user already registered.
-                if (response.status === 409) {
-                    navigate("/dashboard", { replace: true });
-                    return;
-                }
-
-                throw new Error(data.message || "Profile creation failed");
-            }
-
-            navigate("/dashboard", { replace: true });
-
-        } catch (err) {
-            console.error("Google signup failed:", err);
-            setError(err.message || "Google signup failed");
-        } finally {
-            setLoading(false);
-        }
-    };
 
 
     return (

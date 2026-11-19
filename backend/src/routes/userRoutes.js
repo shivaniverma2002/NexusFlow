@@ -6,6 +6,8 @@ import authorizeRoles from "../middleware/roleMiddleware.js";
 import validateMiddleware from "../middleware/validateMiddleware.js";
 
 import {
+    registerUser,
+    loginUser,
     createUserProfile,
     getMyProfile,
     updateMyProfile,
@@ -19,6 +21,8 @@ import {
 
 import {
     createUserSchema,
+    registerUserSchema,
+    loginUserSchema,
     updateUserSchema,
     updateUserStatusSchema,
     adminCreateUserSchema
@@ -91,5 +95,16 @@ router.get(
     authorizeRoles("admin"),
     getDashboardStats
 );
+// Public authentication routes
+router.post(
+    "/register",
+    validateMiddleware(registerUserSchema),
+    registerUser
+);
 
+router.post(
+    "/login",
+    validateMiddleware(loginUserSchema),
+    loginUser
+);
 export default router;

@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import UserLayout from "../components/layout/UserLayout.jsx";
-import { auth } from "../config/firebase.js";
+import { useAuth } from "../context/AuthContext.jsx";
+import API_URL from "../config/api.js";
 
 import {
     Headphones,
@@ -14,6 +15,8 @@ import {
 } from "lucide-react";
 
 const UserSupport = () => {
+    const { currentUser, token } = useAuth();
+
     const [form, setForm] = useState({
         name: "",
         email: "",
@@ -22,7 +25,6 @@ const UserSupport = () => {
     });
 
     const [loading, setLoading] = useState(false);
-    const API_URL = import.meta.env.VITE_API_URL;
 
     const handleChange = (e) => {
         setForm((previous) => ({
@@ -52,30 +54,23 @@ const UserSupport = () => {
         try {
             setLoading(true);
 
-            const currentUser = auth.currentUser;
-
-            if (!currentUser) {
+            if (!currentUser || !token) {
                 throw new Error("Please login again.");
             }
 
-            const token = await currentUser.getIdToken();
-
-            const response = await fetch(
-                `${API_URL}/api/support`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        name: form.name.trim(),
-                        email: form.email.trim(),
-                        subject: form.subject.trim(),
-                        message: form.message.trim()
-                    })
-                }
-            );
+            const response = await fetch(`${API_URL}/api/support`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: form.name.trim(),
+                    email: form.email.trim(),
+                    subject: form.subject.trim(),
+                    message: form.message.trim()
+                })
+            });
 
             const data = await response.json();
 

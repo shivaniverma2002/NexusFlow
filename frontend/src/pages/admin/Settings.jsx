@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { auth } from "../../config/firebase.js";
+import { useAuth } from "../../context/AuthContext.jsx";
 import MainLayout from "../../components/layout/MainLayout.jsx";
 import { toast } from "sonner";
 
@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 
 const Settings = () => {
+    const { currentUser } = useAuth();
+
     const [preferences, setPreferences] = useState({
         emailNotifications: true,
         securityNotifications: true,
@@ -34,8 +36,6 @@ const Settings = () => {
             description: "Persistent settings storage will be connected through the backend."
         });
     };
-
-    const currentUser = auth.currentUser;
 
     const options = [
         {
@@ -100,7 +100,7 @@ const Settings = () => {
                             Display Name
                         </label>
                         <input
-                            value={currentUser?.displayName || "Not available"}
+                            value={currentUser?.name || "Not available"}
                             readOnly
                             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
                         />
@@ -119,7 +119,7 @@ const Settings = () => {
                 </div>
 
                 <p className="mt-4 text-xs text-slate-400">
-                    Account identity is managed through Firebase Authentication.
+                    Account identity is managed through JWT authentication.
                 </p>
             </section>
 

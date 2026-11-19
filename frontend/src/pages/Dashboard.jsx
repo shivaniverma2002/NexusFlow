@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
-import { logoutUser } from "../services/authService.js";
 import { toast } from "sonner";
 import Swal from "sweetalert2";
 
@@ -17,17 +16,15 @@ import {
     X,
     CheckCircle,
     AlertCircle,
-    LoaderCircle,
-    Headphones
+    LoaderCircle
 } from "lucide-react";
 
 import UserLayout from "../components/layout/UserLayout.jsx";
-
 import API_URL from "../config/api.js";
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    const { currentUser } = useAuth();
+    const { currentUser, token, logout } = useAuth();
 
     const [profile, setProfile] = useState(null);
     const [profileLoading, setProfileLoading] = useState(true);
@@ -38,18 +35,12 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-    const navigation = [
-        { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-        { name: "Security", path: "/dashboard/security", icon: ShieldCheck },
-        { name: "Help & Support", path: "/dashboard/support", icon: Headphones }
-    ];
-
     // Fetch logged-in user's profile
     useEffect(() => {
         let cancelled = false;
 
         const fetchProfile = async () => {
-            if (!currentUser) {
+            if (!currentUser || !token) {
                 setProfileLoading(false);
                 return;
             }
@@ -57,8 +48,6 @@ const Dashboard = () => {
             try {
                 setProfileLoading(true);
                 setProfileError("");
-
-                const token = await currentUser.getIdToken();
 
                 const response = await fetch(`${API_URL}/api/users/me`, {
                     headers: {
@@ -92,7 +81,7 @@ const Dashboard = () => {
         return () => {
             cancelled = true;
         };
-    }, [currentUser]);
+    }, [currentUser, token]);
 
     // Update own profile
     const handleUpdateProfile = async (e) => {
@@ -108,11 +97,9 @@ const Dashboard = () => {
         try {
             setLoading(true);
 
-            if (!currentUser) {
+            if (!currentUser || !token) {
                 throw new Error("Please log in again.");
             }
-
-            const token = await currentUser.getIdToken();
 
             const response = await fetch(`${API_URL}/api/users/me`, {
                 method: "PUT",
@@ -168,10 +155,13 @@ const Dashboard = () => {
 
         try {
             setIsLoggingOut(true);
-            await logoutUser();
+
+            // Clear JWT session using AuthContext
+            logout();
 
             toast.success("Logged out successfully!");
             navigate("/login", { replace: true });
+
         } catch (error) {
             toast.error("Logout failed", {
                 description: error.message

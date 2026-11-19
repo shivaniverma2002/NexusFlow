@@ -1,12 +1,8 @@
 
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-    signInWithEmailAndPassword,
-    signInWithPopup,
-    sendPasswordResetEmail
-} from "firebase/auth";
-import { auth, googleProvider } from "../config/firebase.js";
+
+import { useAuth } from "../context/AuthContext.jsx";
 
 import {
     Eye,
@@ -24,8 +20,7 @@ import {
     Sparkles,
     LoaderCircle
 } from "lucide-react";
-import { API_URL } from "../config/apiConfig.js";
-import { logoutUser } from "../services/authService.js";
+
 export default function Login() {
     const navigate = useNavigate();
 
@@ -34,108 +29,58 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
 
-    const redirectUser = async (user) => {
-        const token = await user.getIdToken();
+    const { login } = useAuth();
 
-        const response = await fetch(
-            `${API_URL}/api/users/me`,
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            }
-        );
+   
 
-        const data = await response.json();
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
 
-        if (!response.ok) {
-            throw new Error(data.message || "Profile verification failed");
-        }
+    try {
+        setLoading(true);
 
-        if (data.user?.isActive === false) {
-    await logoutUser();
-
-    throw new Error(
-        "Your account is inactive. Contact the administrator."
-    );
-}
+        const result = await login(email.trim(), password);
 
         navigate(
-            data.user.role === "admin"
+            result.user.role === "admin"
                 ? "/admin/dashboard"
                 : "/dashboard",
             { replace: true }
         );
-    };
 
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        setError("");
-        setSuccess("");
+    } catch (err) {
+        console.error("Login failed:", err);
+        setError(err.message || "Login failed. Please try again.");
+    } finally {
+        setLoading(false);
+    }
+};
 
-        try {
-            setLoading(true);
+    // const handleGoogleLogin = async () => {
+    //     setError("");
+    //     setSuccess("");
 
-            const result = await signInWithEmailAndPassword(
-                auth,
-                email.trim(),
-                password
-            );
+    //     try {
+    //         setLoading(true);
 
-            await redirectUser(result.user);
+    //         const result = await signInWithPopup(auth, googleProvider);
 
-        } catch (err) {
-            console.error("Login failed:", err);
-            setError(err.message || "Login failed. Please try again.");
-        } finally {
-            setLoading(false);
-        }
-    };
+    //         await redirectUser(result.user);
 
-    const handleGoogleLogin = async () => {
-        setError("");
-        setSuccess("");
+    //     } catch (err) {
+    //         console.error("Google login failed:", err);
+    //         setError(err.message || "Google login failed.");
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
 
-        try {
-            setLoading(true);
-
-            const result = await signInWithPopup(auth, googleProvider);
-
-            await redirectUser(result.user);
-
-        } catch (err) {
-            console.error("Google login failed:", err);
-            setError(err.message || "Google login failed.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleForgotPassword = async () => {
-        setError("");
-        setSuccess("");
-
-        if (!email.trim()) {
-            setError("Please enter your email address first.");
-            return;
-        }
-
-        try {
-            setLoading(true);
-
-            await sendPasswordResetEmail(auth, email.trim());
-
-            setSuccess("Password reset email sent. Please check your inbox.");
-
-        } catch (err) {
-            setError(err.message || "Unable to send reset email.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
+const handleForgotPassword = () => {
+    setError("Password reset is not available yet. Please contact the administrator.");
+};
     return (
         <div className="min-h-screen grid lg:grid-cols-2 bg-white">
 
@@ -441,31 +386,9 @@ export default function Login() {
                     </form>
 
                     {/* Divider */}
-                    <div className="relative my-7">
-                        <div className="border-t border-slate-200" />
+                    
 
-                        <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-white px-4 text-sm text-slate-400">
-                            OR
-                        </span>
-                    </div>
-
-                    {/* Google login */}
-                    <button
-                        type="button"
-                        onClick={handleGoogleLogin}
-                        disabled={loading}
-                        className="w-full flex items-center justify-center gap-3 border border-slate-200 rounded-xl py-3 font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
-                    >
-                        <svg viewBox="0 0 48 48" className="w-5 h-5" aria-hidden="true">
-                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 3.2 13.22l7.98 6.19C13.08 13.72 18.11 9.5 24 9.5z" transform="translate(0 4)" />
-                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.72 7.18l7.62 5.91c4.45-4.1 7.14-10.14 7.14-17.56z" />
-                            <path fill="#FBBC05" d="M10.18 28.59a14.4 14.4 0 0 1 0-9.18L2.2 13.22a23.9 23.9 0 0 0 0 21.56l7.98-6.19z" />
-                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.89l-7.62-5.91c-2.12 1.42-4.84 2.27-8.29 2.27-5.89 0-10.92-4.22-12.82-9.91L3.2 34.78C6.51 42.62 14.62 48 24 48z" />
-                        </svg>
-
-                        Continue with Google
-                    </button>
-
+                 
                     {/* Signup link */}
                     <p className="text-center text-sm text-slate-500 mt-8">
                         Don't have an account?{" "}

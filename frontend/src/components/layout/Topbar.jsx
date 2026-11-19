@@ -11,16 +11,15 @@ import {
 
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
-import { logoutUser } from "../../services/authService.js";
-import { auth } from "../../config/firebase.js";
-
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 
-const API_URL= `${import.meta.env.VITE_API_URL}/api/support`;
+import API_URL from "../../config/api.js";
+
+const SUPPORT_API_URL = `${API_URL}/api/support`;
 
 const Topbar = () => {
-    const { currentUser } = useAuth();
+    const { currentUser, token, logout } = useAuth();
     const navigate = useNavigate();
 
     const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -33,15 +32,18 @@ const Topbar = () => {
     const notificationRef = useRef(null);
 
     // Fetch admin support notifications
-    const fetchNotifications = async (showLoader = false) => {
-        try {
-            if (!auth.currentUser) return;
+    const fetchNotifications = useCallback(async (showLoader = false) => {
+        if (!currentUser || !token) {
+            setNotifications([]);
+            setUnreadCount(0);
+            setLoadingNotifications(false);
+            return;
+        }
 
+        try {
             if (showLoader) setLoadingNotifications(true);
 
-            const token = await auth.currentUser.getIdToken();
-
-            const response = await fetch(`${API_URL}/notifications`, {
+            const response = await fetch(`${SUPPORT_API_URL}/notifications`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -61,7 +63,7 @@ const Topbar = () => {
         } finally {
             if (showLoader) setLoadingNotifications(false);
         }
-    };
+    }, [currentUser, token]);
 
     // Initial fetch and polling every 15 seconds
     useEffect(() => {
@@ -72,7 +74,7 @@ const Topbar = () => {
         }, 15000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [fetchNotifications]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -95,10 +97,12 @@ const Topbar = () => {
     // Mark notification as read
     const handleMarkAsRead = async (requestId) => {
         try {
-            const token = await auth.currentUser.getIdToken();
+            if (!token) {
+                throw new Error("Please login again.");
+            }
 
             const response = await fetch(
-                `${API_URL}/notifications/${requestId}/read`,
+                `${SUPPORT_API_URL}/notifications/${requestId}/read`,
                 {
                     method: "PATCH",
                     headers: {
@@ -134,10 +138,12 @@ const Topbar = () => {
         try {
             setResolvingId(requestId);
 
-            const token = await auth.currentUser.getIdToken();
+            if (!token) {
+                throw new Error("Please login again.");
+            }
 
             const response = await fetch(
-                `${API_URL}/${requestId}/resolve`,
+                `${SUPPORT_API_URL}/${requestId}/resolve`,
                 {
                     method: "PATCH",
                     headers: {
@@ -170,14 +176,18 @@ const Topbar = () => {
         }
     };
 
-    // Logout
+    // Logout using JWT AuthContext
     const handleLogout = async () => {
         if (isLoggingOut) return;
 
         setIsLoggingOut(true);
 
         try {
-            await logoutUser();
+            logout();
+
+            setNotifications([]);
+            setUnreadCount(0);
+            setShowNotifications(false);
 
             toast.success("Logged out successfully!");
             navigate("/login", { replace: true });
@@ -193,7 +203,11 @@ const Topbar = () => {
         }
     };
 
-    const userName = currentUser?.displayName || "Administrator";
+    const userName =
+        currentUser?.name ||
+        currentUser?.displayName ||
+        "Administrator";
+
     const userEmail = currentUser?.email || "";
     const initial = userName.charAt(0).toUpperCase();
 

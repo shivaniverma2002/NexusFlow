@@ -1,12 +1,11 @@
 
-import { auth } from "../config/firebaseAdmin.js";
+import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 const verifyToken = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
 
-        // Check authorization header
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
             return res.status(401).json({
                 success: false,
@@ -23,23 +22,35 @@ const verifyToken = async (req, res, next) => {
             });
         }
 
-        // Verify Firebase ID token
-        const decodedToken = await auth.verifyIdToken(token);
+        // Verify JWT
+      if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is not configured");
+}
 
-        // Find corresponding MongoDB user
-        const dbUser = await User.findOne({
-            firebaseUid: decodedToken.uid
-        }).select("-__v");
+const decodedToken = jwt.verify(
+    token,
+    process.env.JWT_SECRET,
+    { algorithms: ["HS256"] }
+);
 
-        // Reject users without a MongoDB profile
+if (!decodedToken.userId) {
+    return res.status(401).json({
+        success: false,
+        message: "Invalid authentication token"
+    });
+}
+
+        // Find user in MongoDB
+        const dbUser = await User.findById(decodedToken.userId)
+            .select("-password -__v");
+
         if (!dbUser) {
-            return res.status(403).json({
+            return res.status(401).json({
                 success: false,
                 message: "User profile not found"
             });
         }
 
-        // Reject inactive accounts
         if (!dbUser.isActive) {
             return res.status(403).json({
                 success: false,
@@ -47,10 +58,10 @@ const verifyToken = async (req, res, next) => {
             });
         }
 
-        // Attach trusted database user information
+        // Attach trusted database information
         req.user = {
-            uid: decodedToken.uid,
-            email: decodedToken.email,
+            uid: dbUser._id.toString(),
+            email: dbUser.email,
             role: dbUser.role,
             isActive: dbUser.isActive,
             dbUserId: dbUser._id

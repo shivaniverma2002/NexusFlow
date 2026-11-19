@@ -3,14 +3,6 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
     {
-        firebaseUid: {
-            type: String,
-            required: true,
-            unique: true,
-            index: true,
-            trim: true
-        },
-
         name: {
             type: String,
             required: true,
@@ -26,6 +18,13 @@ const userSchema = new mongoose.Schema(
             lowercase: true,
             trim: true,
             maxlength: 254
+        },
+
+        password: {
+            type: String,
+            required: true,
+            minlength: 8,
+            select: false
         },
 
         role: {
@@ -51,7 +50,6 @@ const userSchema = new mongoose.Schema(
 // Compound index for admin user listing and filtering
 userSchema.index({ role: 1, isActive: 1, createdAt: -1 });
 
-// Create User model
 const User = mongoose.model("User", userSchema);
 
 export default User;

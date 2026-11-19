@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { auth } from "../config/firebase.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 import MainLayout from "../components/layout/MainLayout.jsx";
 
@@ -14,11 +14,15 @@ import UserFilters from "../components/users/UserFilter.jsx";
 import EditUserModal from "../components/users/EditUserModal.jsx";
 import UserDetailsModal from "../components/users/UserDetailsModal.jsx";
 import AddUserModal from "../components/users/AddUserModal.jsx";
+
 import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import Swal from "sweetalert2";
 import API_URL from "../config/api.js";
+
 const AdminDashboard = () => {
+    const { currentUser, token } = useAuth();
+
     // Users state
     const [users, setUsers] = useState([]);
     const [search, setSearch] = useState("");
@@ -31,10 +35,11 @@ const AdminDashboard = () => {
     const [editingUser, setEditingUser] = useState(null);
     const [savingUser, setSavingUser] = useState(false);
     const [updatingStatus, setUpdatingStatus] = useState(false);
+
     // Pagination state
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-   
+
     // Dashboard statistics state
     const [stats, setStats] = useState(null);
     const [statsError, setStatsError] = useState("");
@@ -47,25 +52,24 @@ const AdminDashboard = () => {
         setSearch(value);
         setPage(1);
     };
+
     const handleViewUser = (user) => {
         setSelectedUser(user);
         setShowUserDetails(true);
     };
+
     const handleEditUser = (user) => {
         setEditingUser(user);
     };
 
+    // Update user
     const handleSaveUser = async (userId, updatedData) => {
         try {
             setSavingUser(true);
 
-            const currentUser = auth.currentUser;
-
-            if (!currentUser) {
+            if (!currentUser || !token) {
                 throw new Error("Please login again.");
             }
-
-            const token = await currentUser.getIdToken();
 
             const response = await fetch(
                 `${API_URL}/api/users/admin/users/${userId}`,
@@ -85,7 +89,6 @@ const AdminDashboard = () => {
                 throw new Error(data.message || "Failed to update user");
             }
 
-            // Update the user in the existing table
             setUsers((previousUsers) =>
                 previousUsers.map((user) =>
                     user._id === userId
@@ -95,7 +98,6 @@ const AdminDashboard = () => {
             );
 
             setEditingUser(null);
-
             toast.success("User updated successfully!");
 
         } catch (error) {
@@ -106,145 +108,139 @@ const AdminDashboard = () => {
         }
     };
 
-    
-const handleToggleStatus = async (user) => {
-    const action = user.isActive ? "deactivate" : "activate";
+    // Activate / Deactivate user
+    const handleToggleStatus = async (user) => {
+        const action = user.isActive ? "deactivate" : "activate";
 
-    const result = await Swal.fire({
-        title: user.isActive ? "Deactivate User?" : "Activate User?",
-        text: user.isActive
-            ? `Are you sure you want to deactivate ${user.name}'s account? They will lose access until reactivated.`
-            : `Are you sure you want to activate ${user.name}'s account?`,
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: user.isActive ? "Yes, deactivate" : "Yes, activate",
-        cancelButtonText: "Cancel",
-        confirmButtonColor: user.isActive ? "#e11d48" : "#7c3aed",
-        cancelButtonColor: "#64748b",
-        reverseButtons: true
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-        setUpdatingStatus(true);
-
-        const currentUser = auth.currentUser;
-
-        if (!currentUser) {
-            throw new Error("Please login again.");
-        }
-
-        const token = await currentUser.getIdToken();
-
-        const response = await fetch(
-            `${API_URL}/api/users/admin/users/${user._id}/status`,
-            {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    isActive: !user.isActive
-                })
-            }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.message || "Failed to update account status");
-        }
-
-        setUsers((previousUsers) =>
-            previousUsers.map((item) =>
-                item._id === user._id
-                    ? { ...item, isActive: !user.isActive }
-                    : item
-            )
-        );
-
-        toast.success(
-            `User ${action}d successfully!`,
-            {
-                description: `${user.name}'s account status has been updated.`
-            }
-        );
-
-    } catch (error) {
-        console.error("Status update error:", error);
-        toast.error("Unable to update account", {
-            description: error.message
+        const result = await Swal.fire({
+            title: user.isActive ? "Deactivate User?" : "Activate User?",
+            text: user.isActive
+                ? `Are you sure you want to deactivate ${user.name}'s account? They will lose access until reactivated.`
+                : `Are you sure you want to activate ${user.name}'s account?`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: user.isActive ? "Yes, deactivate" : "Yes, activate",
+            cancelButtonText: "Cancel",
+            confirmButtonColor: user.isActive ? "#e11d48" : "#7c3aed",
+            cancelButtonColor: "#64748b",
+            reverseButtons: true
         });
-    } finally {
-        setUpdatingStatus(false);
-    }
-};
+
+        if (!result.isConfirmed) return;
+
+        try {
+            setUpdatingStatus(true);
+
+            if (!currentUser || !token) {
+                throw new Error("Please login again.");
+            }
+
+            const response = await fetch(
+                `${API_URL}/api/users/admin/users/${user._id}/status`,
+                {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        isActive: !user.isActive
+                    })
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Failed to update account status");
+            }
+
+            setUsers((previousUsers) =>
+                previousUsers.map((item) =>
+                    item._id === user._id
+                        ? { ...item, isActive: !user.isActive }
+                        : item
+                )
+            );
+
+            toast.success(
+                `User ${action}d successfully!`,
+                {
+                    description: `${user.name}'s account status has been updated.`
+                }
+            );
+
+        } catch (error) {
+            console.error("Status update error:", error);
+            toast.error("Unable to update account", {
+                description: error.message
+            });
+        } finally {
+            setUpdatingStatus(false);
+        }
+    };
 
     // Delete User
-  
-const handleDeleteUser = async (user) => {
-    const result = await Swal.fire({
-        title: "Delete User?",
-        text: `Are you sure you want to permanently delete ${user.name}?`,
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Yes, delete",
-        cancelButtonText: "Cancel",
-        confirmButtonColor: "#e11d48",
-        reverseButtons: true
-    });
+    const handleDeleteUser = async (user) => {
+        const result = await Swal.fire({
+            title: "Delete User?",
+            text: `Are you sure you want to permanently delete ${user.name}?`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Yes, delete",
+            cancelButtonText: "Cancel",
+            confirmButtonColor: "#e11d48",
+            reverseButtons: true
+        });
 
-    if (!result.isConfirmed) return;
+        if (!result.isConfirmed) return;
 
-    try {
-        const currentUser = auth.currentUser;
-
-        if (!currentUser) {
-            throw new Error("Please login again.");
-        }
-
-        const token = await currentUser.getIdToken();
-
-        const response = await fetch(
-            `${API_URL}/api/users/admin/users/${user._id}`,
-            {
-                method: "DELETE",
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
+        try {
+            if (!currentUser || !token) {
+                throw new Error("Please login again.");
             }
-        );
 
-        const data = await response.json();
+            const response = await fetch(
+                `${API_URL}/api/users/admin/users/${user._id}`,
+                {
+                    method: "DELETE",
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
 
-        if (!response.ok) {
-            throw new Error(data.message || "Failed to delete user");
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Failed to delete user");
+            }
+
+            setUsers((prevUsers) =>
+                prevUsers.filter((item) => item._id !== user._id)
+            );
+
+            toast.success("User deleted successfully!", {
+                description: `${user.name} has been removed.`
+            });
+
+        } catch (error) {
+            console.error("Delete user error:", error);
+
+            toast.error("Unable to delete user", {
+                description: error.message
+            });
         }
+    };
 
-        setUsers((prevUsers) =>
-            prevUsers.filter((item) => item._id !== user._id)
-        );
-
-        toast.success("User deleted successfully!", {
-            description: `${user.name} has been removed.`
-        });
-
-    } catch (error) {
-        console.error("Delete user error:", error);
-
-        toast.error("Unable to delete user", {
-            description: error.message
-        });
-    }
-};
-
+    // Add User
     const handleAddUser = async (userData) => {
         try {
             setAddingUser(true);
 
-            const token = await auth.currentUser.getIdToken();
+            if (!currentUser || !token) {
+                throw new Error("Please login again.");
+            }
 
             const response = await fetch(
                 `${API_URL}/api/users/admin/users`,
@@ -272,7 +268,9 @@ const handleDeleteUser = async (user) => {
 
         } catch (error) {
             console.error("Add user error:", error);
-            toast.error("Failed to create user");
+            toast.error("Failed to create user", {
+                description: error.message
+            });
         } finally {
             setAddingUser(false);
         }
@@ -284,20 +282,19 @@ const handleDeleteUser = async (user) => {
         setSearch("");
         setPage(1);
     };
+
     // Fetch users and search results
     useEffect(() => {
+        let cancelled = false;
+
         const fetchUsers = async () => {
             try {
                 setLoading(true);
                 setError("");
 
-                const currentUser = auth.currentUser;
-
-                if (!currentUser) {
+                if (!currentUser || !token) {
                     throw new Error("Please login again.");
                 }
-
-                const token = await currentUser.getIdToken();
 
                 const response = await fetch(
                     `${API_URL}/api/users/admin/users?page=${page}&limit=10&search=${encodeURIComponent(search)}&role=${role === "all" ? "" : role}&isActive=${status === "all" ? "" : status}`,
@@ -316,32 +313,40 @@ const handleDeleteUser = async (user) => {
                     );
                 }
 
-                setUsers(data.users || []);
-                setTotalPages(data.pagination?.totalPages || 1);
+                if (!cancelled) {
+                    setUsers(data.users || []);
+                    setTotalPages(data.pagination?.totalPages || 1);
+                }
 
             } catch (err) {
-                setError(err.message);
+                if (!cancelled) {
+                    setError(err.message);
+                }
             } finally {
-                setLoading(false);
+                if (!cancelled) {
+                    setLoading(false);
+                }
             }
         };
 
         fetchUsers();
-    }, [search, page, role, status, refreshData]);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [search, page, role, status, refreshData, currentUser, token]);
 
     // Fetch dashboard statistics
     useEffect(() => {
+        let cancelled = false;
+
         const fetchStats = async () => {
             try {
                 setStatsError("");
 
-                const currentUser = auth.currentUser;
-
-                if (!currentUser) {
+                if (!currentUser || !token) {
                     throw new Error("Please login again.");
                 }
-
-                const token = await currentUser.getIdToken();
 
                 const response = await fetch(
                     `${API_URL}/api/users/admin/stats`,
@@ -360,15 +365,23 @@ const handleDeleteUser = async (user) => {
                     );
                 }
 
-                setStats(data.stats);
+                if (!cancelled) {
+                    setStats(data.stats);
+                }
 
             } catch (err) {
-                setStatsError(err.message);
+                if (!cancelled) {
+                    setStatsError(err.message);
+                }
             }
         };
 
         fetchStats();
-    }, []);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [currentUser, token]);
 
     return (
         <MainLayout>
@@ -400,7 +413,6 @@ const handleDeleteUser = async (user) => {
                         </p>
                     </div>
 
-
                     <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-end">
                         <UserSearch
                             search={search}
@@ -430,9 +442,7 @@ const handleDeleteUser = async (user) => {
                             <span>Add User</span>
                         </button>
                     </div>
-
                 </div>
-
 
                 {/* Users Table */}
                 <UserTable
@@ -445,6 +455,7 @@ const handleDeleteUser = async (user) => {
                     onDelete={handleDeleteUser}
                     updatingStatus={updatingStatus}
                 />
+
                 {showUserDetails && selectedUser && (
                     <UserDetailsModal
                         user={selectedUser}
@@ -464,6 +475,7 @@ const handleDeleteUser = async (user) => {
                     />
                 )}
             </div>
+
             {editingUser && (
                 <EditUserModal
                     user={editingUser}
@@ -471,8 +483,8 @@ const handleDeleteUser = async (user) => {
                     onSave={handleSaveUser}
                     saving={savingUser}
                 />
-
             )}
+
             {showAddUser && (
                 <AddUserModal
                     onClose={() => setShowAddUser(false)}
@@ -480,7 +492,6 @@ const handleDeleteUser = async (user) => {
                     loading={addingUser}
                 />
             )}
-           
         </MainLayout>
     );
 };

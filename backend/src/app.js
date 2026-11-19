@@ -9,7 +9,6 @@ import userRoutes from "./routes/userRoutes.js";
 import { apiLimiter } from "./middleware/rateLimitMiddleware.js";
 import supportRoutes from "./routes/supportRoutes.js";
 
-
 import {
     notFoundMiddleware,
     errorMiddleware
@@ -30,8 +29,7 @@ app.use(
 const allowedOrigins = [
     "http://localhost:5173",
     "http://localhost:5174",
-    "http://localhost:5173",
-  "https://nexus-flow-ai-psi.vercel.app",
+    "https://nexus-flow-ai-psi.vercel.app"
 ];
 
 if (process.env.FRONTEND_URL) {
@@ -50,7 +48,7 @@ app.use(
 // Parse JSON requests
 app.use(express.json({ limit: "10kb" }));
 
-// Health check - available before API rate limiting
+// Health check
 app.get("/api/health", (req, res) => {
     res.status(200).json({
         success: true,
@@ -58,19 +56,14 @@ app.get("/api/health", (req, res) => {
     });
 });
 
-// Rate limit API requests
+// API rate limiting
 app.use("/api", apiLimiter);
 
-// User routes
-app.use("/api/users", userRoutes);
-// User routes
+// User routes — mount once
 app.use("/api/users", userRoutes);
 
-// Support request routes
+// Support routes
 app.use("/api/support", supportRoutes);
-
-// Admin notification routes
-
 
 // Protected API
 app.get("/api/protected", verifyToken, (req, res) => {
