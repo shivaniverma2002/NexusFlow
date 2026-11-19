@@ -6,39 +6,41 @@ const verifyToken = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
 
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        if (!authHeader) {
             return res.status(401).json({
                 success: false,
                 message: "Authentication token required"
             });
         }
 
-        const token = authHeader.split(" ")[1];
+        // Extract Bearer token
+        const [scheme, token] = authHeader.trim().split(/\s+/);
 
         if (scheme !== "Bearer" || !token) {
-    return res.status(401).json({
-        success: false,
-        message: "Authentication token required"
-    });
-}
+            return res.status(401).json({
+                success: false,
+                message: "Authentication token required"
+            });
+        }
+
+        // Check JWT secret configuration
+        if (!process.env.JWT_SECRET) {
+            throw new Error("JWT_SECRET is not configured");
+        }
 
         // Verify JWT
-      if (!process.env.JWT_SECRET) {
-    throw new Error("JWT_SECRET is not configured");
-}
+        const decodedToken = jwt.verify(
+            token,
+            process.env.JWT_SECRET,
+            { algorithms: ["HS256"] }
+        );
 
-const decodedToken = jwt.verify(
-    token,
-    process.env.JWT_SECRET,
-    { algorithms: ["HS256"] }
-);
-
-if (!decodedToken.userId) {
-    return res.status(401).json({
-        success: false,
-        message: "Invalid authentication token"
-    });
-}
+        if (!decodedToken.userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid authentication token"
+            });
+        }
 
         // Find user in MongoDB
         const dbUser = await User.findById(decodedToken.userId)
@@ -58,7 +60,7 @@ if (!decodedToken.userId) {
             });
         }
 
-        // Attach trusted database information
+        // Attach authenticated user information
         req.user = {
             uid: dbUser._id.toString(),
             email: dbUser.email,
