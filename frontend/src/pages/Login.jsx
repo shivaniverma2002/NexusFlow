@@ -23,8 +23,9 @@ import {
 export default function Login() {
     const navigate = useNavigate();
     const location = useLocation();
-    const [success, setSuccess] = useState(location.state?.message || "");
-    const [email, setEmail] = useState("");
+const [successMessage, setSuccessMessage] = useState(
+    location.state?.message || ""
+);    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
